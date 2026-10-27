@@ -25,14 +25,14 @@ A playful web app that guesses your chance of finding a relationship, explains w
 
 ## Machine learning
 
-The prediction is made by a **logistic regression** classifier built with [scikit-learn](https://scikit-learn.org/). The code is in [model/relationship_predictor.py](model/relationship_predictor.py).
+The prediction is made by a **logistic regression** classifier built with [scikit-learn](https://scikit-learn.org/). The code is in [model/love_predictor.py](model/love_predictor.py).
 
 ### Why logistic regression?
 
 - **Yes-or-no question:** the app predicts one of two outcomes (will or won't have a relationship), which is exactly what logistic regression is built for.
 - **Gives a probability:** it returns a chance between 0% and 100%, not just a yes or no, which is what the forecast shows.
 - **Easy to explain:** each answer gets one weight, so it's simple to see which answers help and which hurt. That's what powers the insights.
-- **Fast and small:** it trains in under a second when the app starts and needs no GPU.
+- **Fast and small:** it trains in under a second, needs no GPU, and the saved model file is only about 2 KB.
 
 ### How it predicts
 
@@ -93,9 +93,27 @@ The model rediscovered the pattern hidden in the synthetic data: confidence and 
 - **Insights (what helps and what hurts):** for each answer, the app swaps your answer for the average answer, asks the model again, and measures the difference. That difference, in percentage points, is how much that answer helps or hurts *you*. Age and sex are left out because they can't be changed.
 - **Recommendations (what-if analysis):** the app raises each thing you can change by a realistic step (for example +2 confidence or turning on dating apps), asks the model again, and keeps the three changes with the biggest gain. Those are passed to the language model to write the tips.
 
+### Saving and loading the model (joblib)
+
+The trained model is saved with [joblib](https://joblib.readthedocs.io/) to `model/love_predictor.joblib`, so the app doesn't have to retrain every time it starts. Next to the model, the file stores the list of features, a fingerprint (SHA-256 hash) of `dataset.csv` and the scikit-learn version.
+
+When the app starts, it loads the saved model if everything still matches. It trains a new model and saves it again automatically when:
+
+- the `.joblib` file doesn't exist yet (for example on a fresh clone),
+- `dataset.csv` has changed,
+- the dataset columns have changed,
+- a different scikit-learn version is installed (saved models aren't guaranteed to work across versions),
+- or the file can't be read.
+
 ### Retraining
 
-The model is trained from `dataset.csv` every time the app starts. To retrain on new data, regenerate or edit the CSV and restart the app. `LovePredictor.append_data()` can also add new labeled rows (with `will_have_relationship` filled in) and save them to the CSV.
+To retrain on new data, regenerate or edit `dataset.csv` and restart the app; the changed fingerprint triggers a retrain. To retrain and save by hand, run:
+
+```bash
+python -m model.love_predictor
+```
+
+`LovePredictor.append_data()` can also add new labeled rows (with `will_have_relationship` filled in) and save them to the CSV. They are used the next time the model is trained.
 
 ## Getting started
 
@@ -131,7 +149,8 @@ love-predictor/
 ├── dataset.csv                   # 1,000 rows of made-up training data
 ├── docs/screenshots/             # Screenshots used in this README
 ├── model/
-│   ├── relationship_predictor.py # Logistic regression model, insights and what-if improvements
+│   ├── love_predictor.py         # Logistic regression model, insights and what-if improvements
+│   ├── love_predictor.joblib     # Saved trained model (created automatically)
 │   └── recommender.py            # AI-written tips using Hugging Face transformers
 └── templates/
     ├── _styles.html              # Shared doodle-style CSS, included in both pages

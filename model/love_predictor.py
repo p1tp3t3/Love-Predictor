@@ -1,5 +1,8 @@
+import hashlib
 import os
 
+import joblib
+import sklearn
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
@@ -8,6 +11,8 @@ import pandas as pd
 
 
 DATASET_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'dataset.csv')
+# Trained model saved with joblib, so the app doesn't retrain on every start
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'love_predictor.joblib')
 
 # Features a person can realistically change: (how much to improve by, max value)
 ACTIONABLE_FEATURES = {
@@ -39,26 +44,67 @@ MIN_INSIGHT_IMPACT = 0.01
 class LovePredictor:
     # The LovePredictor class is responsible for handling the machine learning model and its operations.
     # It predicts whether the person will have a relationship based on the history of the situation of the person.
-    def __init__(self, dataset_path=DATASET_PATH):
+    def __init__(self, dataset_path=DATASET_PATH, model_path=MODEL_PATH):
         self.dataset_path = dataset_path
-        # Scale the features first so LogisticRegression converges cleanly
-        self.model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+        self.model_path = model_path
+        self.model = None
         self.df = pd.read_csv(self.dataset_path)
         self.is_trained = False
         self.Y = 'will_have_relationship'
         self.X = [column for column in self.df.columns if column != self.Y]
         self.test_x = None
         self.test_y = None
-        self.train()
+        # Use the saved model if it still matches the dataset, otherwise train a new one
+        if not self.load():
+            self.train()
 
-    def train(self):
-        train_x, self.test_x, train_y, self.test_y = train_test_split(
-            self.df[self.X], self.df[self.Y], test_size=0.2, random_state=42
-        )
-        self.model.fit(train_x, train_y)
+    def _split(self):
+        # Same random_state every time, so a loaded model is tested on the same rows it was trained without
+        return train_test_split(self.df[self.X], self.df[self.Y], test_size=0.2, random_state=42)
+
+    def _dataset_hash(self):
+        with open(self.dataset_path, 'rb') as f:
+            return hashlib.sha256(f.read()).hexdigest()
+
+    def _finish_setup(self):
+        _, self.test_x, _, self.test_y = self._split()
         # Everyone's predicted chance, used to compare a new person with the dataset
         self.dataset_probabilities = self.model.predict_proba(self.df[self.X])[:, 1]
         self.is_trained = True
+
+    def train(self, save=True):
+        # Scale the features first so LogisticRegression converges cleanly
+        self.model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+        train_x, _, train_y, _ = self._split()
+        self.model.fit(train_x, train_y)
+        self._finish_setup()
+        if save:
+            self.save()
+
+    def save(self):
+        joblib.dump({
+            'model': self.model,
+            'features': self.X,
+            'dataset_hash': self._dataset_hash(),
+            'sklearn_version': sklearn.__version__,
+        }, self.model_path)
+
+    def load(self):
+        # Returns False when there is no usable saved model, so the caller can retrain
+        if not os.path.exists(self.model_path):
+            return False
+        try:
+            saved = joblib.load(self.model_path)
+        except Exception:
+            return False
+        # Retrain if the data, the columns or the scikit-learn version changed since saving
+        if (saved.get('dataset_hash') != self._dataset_hash()
+                or saved.get('features') != self.X
+                or saved.get('sklearn_version') != sklearn.__version__):
+            return False
+        self.model = saved['model']
+        self._finish_setup()
+        return True
 
     def evaluate(self):
         # Accuracy on the held-out test split
@@ -159,3 +205,11 @@ class LovePredictor:
 
         results.sort(key=lambda item: item['gain'], reverse=True)
         return results[:top_n]
+
+
+if __name__ == '__main__':
+    # Retrain from dataset.csv and save the model: python -m model.love_predictor
+    predictor = LovePredictor()
+    predictor.train()
+    print(f'Saved model to {predictor.model_path}')
+    print(f'Test accuracy: {predictor.evaluate():.3f}')
