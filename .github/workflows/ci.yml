@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # The CPU-only build of PyTorch is much smaller than the default GPU build
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+
+      - name: Check that all Python files compile
+        run: python -m compileall -q main.py generate_dataset.py model
+
+      - name: Train the model and check its accuracy
+        run: |
+          python -m model.love_predictor
+          python - <<'EOF'
+          from model.love_predictor import LovePredictor
+
+          accuracy = LovePredictor().evaluate()
+          print(f'Test accuracy: {accuracy:.3f}')
+          assert accuracy >= 0.65, f'Accuracy dropped below 65%: {accuracy:.3f}'
+          EOF
+
+      - name: Smoke test the pages and API
+        run: |
+          python - <<'EOF'
+          from unittest import mock
+
+          # Skip loading the ~1 GB language model in CI, so tips are expected to be unavailable (503)
+          with mock.patch('model.recommender.Recommender._load'):
+              import main
+
+          client = main.app.test_client()
+          person = {
+              'age': 25, 'sex': 1, 'past_relationships': 2, 'years_single': 1.5,
+              'social_activity': 5, 'confidence': 6, 'hobbies_count': 3,
+              'friends_count': 10, 'uses_dating_apps': 1, 'goes_out_per_month': 4,
+          }
+
+          assert client.get('/').status_code == 200, 'Form page failed'
+          assert client.get('/result').status_code == 200, 'Result page failed'
+
+          response = client.post('/api/model/predict', json=person)
+          assert response.status_code == 200, response.get_json()
+          result = response.get_json()
+          assert result['prediction'] in (0, 1)
+          assert 0 <= result['probability'] <= 1
+          for key in ('average_probability', 'percentile', 'strengths', 'challenges'):
+              assert key in result['insights'], f'Missing insight: {key}'
+
+          response = client.post('/api/model/predict', json={'age': 25})
+          assert response.status_code == 400, 'Missing fields should return 400'
+
+          response = client.post('/api/model/recommend', json=person)
+          assert response.status_code == 503, 'Tips should be unavailable without the language model'
+
+          accuracy = client.get('/api/model/evaluate').get_json()['accuracy']
+          assert 0 <= accuracy <= 1
+
+          print('All smoke tests passed')
+          EOF
