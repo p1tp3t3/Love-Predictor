@@ -19,101 +19,9 @@ A playful web app that guesses your chance of finding a relationship, explains w
 
 ## How it works
 
-1. **Prediction:** a machine learning model (logistic regression), trained on [dataset.csv](dataset.csv), predicts the chance from your answers. See [Machine learning](#machine-learning) below.
+1. **Prediction:** a machine learning model (logistic regression), trained on [dataset.csv](dataset.csv), predicts the chance from your answers.
 2. **Insights:** the same model explains the result by measuring how much each of your answers raises or lowers your chance.
 3. **Recommendations:** the model finds the three changes that would raise your chance the most, and a Hugging Face language model ([Qwen2.5-0.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct)) writes a tip for each one.
-
-## Machine learning
-
-The prediction is made by a **logistic regression** classifier built with [scikit-learn](https://scikit-learn.org/). The code is in [model/love_predictor.py](model/love_predictor.py).
-
-### Why logistic regression?
-
-- **Yes-or-no question:** the app predicts one of two outcomes (will or won't have a relationship), which is exactly what logistic regression is built for.
-- **Gives a probability:** it returns a chance between 0% and 100%, not just a yes or no, which is what the forecast shows.
-- **Easy to explain:** each answer gets one weight, so it's simple to see which answers help and which hurt. That's what powers the insights.
-- **Fast and small:** it trains in under a second, needs no GPU, and the saved model file is only about 2 KB.
-
-### How it predicts
-
-The model gives each answer a weight, adds them up into a score, and turns the score into a probability with the sigmoid function:
-
-```
-score       = b + w1 * age + w2 * sex + ... + w10 * goes_out_per_month
-probability = 1 / (1 + e^(-score))
-```
-
-If the probability is 50% or more, the prediction is "will have a relationship" (1), otherwise "not yet" (0).
-
-### Pipeline
-
-The model is a scikit-learn pipeline with two steps:
-
-1. **`StandardScaler`** rescales every answer to the same range (mean 0, standard deviation 1). Without it, answers with big numbers like `friends_count` would drown out small ones like `confidence`, and the model would train poorly.
-2. **`LogisticRegression(max_iter=1000)`** learns the weights.
-
-The 10 inputs (features) are `age`, `sex`, `past_relationships`, `years_single`, `social_activity`, `confidence`, `hobbies_count`, `friends_count`, `uses_dating_apps` and `goes_out_per_month`. The target (label) is `will_have_relationship`.
-
-### Training and evaluation
-
-The 1,000 rows are split into **800 for training** and **200 for testing** (`train_test_split`, `test_size=0.2`, `random_state=42`). The model never sees the test rows while training, so its scores on them show how well it handles new people.
-
-| Metric | Score | Meaning |
-|---|---|---|
-| Accuracy | 68.5% | Share of test people predicted correctly |
-| Precision | 71.3% | When it says "yes", how often it's right |
-| Recall | 65.0% | Of the people who really said "yes", how many it found |
-| F1 score | 68.0% | Balance of precision and recall |
-| ROC AUC | 0.745 | How well it ranks people by chance (0.5 = guessing, 1.0 = perfect) |
-
-The scores are deliberately not near 100%: the dataset has random noise built in, just like real life, where two people with the same answers can have different outcomes. You can check the accuracy anytime at `GET /api/model/evaluate`.
-
-### What the model learned
-
-These are the learned weights on the scaled answers. A positive weight raises the chance and a negative one lowers it. The bigger the number, the stronger the effect.
-
-| Feature | Weight | Effect |
-|---|---|---|
-| `confidence` | +0.72 | Strongest boost |
-| `social_activity` | +0.61 | Strong boost |
-| `uses_dating_apps` | +0.29 | Boost |
-| `years_single` | −0.25 | Lowers the chance |
-| `goes_out_per_month` | +0.21 | Boost |
-| `friends_count` | +0.18 | Small boost |
-| `age` | −0.15 | Small drop |
-| `hobbies_count` | +0.14 | Small boost |
-| `past_relationships` | +0.09 | Very small boost |
-| `sex` | −0.05 | Almost no effect |
-
-The model rediscovered the pattern hidden in the synthetic data: confidence and social activity matter most, being single for a long time hurts, and sex has close to no effect.
-
-### How the model powers the insights and tips
-
-- **Comparison with others:** when the app starts, the model scores everyone in the dataset. Your chance is compared with the average, and with the share of people who scored lower than you.
-- **Insights (what helps and what hurts):** for each answer, the app swaps your answer for the average answer, asks the model again, and measures the difference. That difference, in percentage points, is how much that answer helps or hurts *you*. Age and sex are left out because they can't be changed.
-- **Recommendations (what-if analysis):** the app raises each thing you can change by a realistic step (for example +2 confidence or turning on dating apps), asks the model again, and keeps the three changes with the biggest gain. Those are passed to the language model to write the tips.
-
-### Saving and loading the model (joblib)
-
-The trained model is saved with [joblib](https://joblib.readthedocs.io/) to `model/love_predictor.joblib`, so the app doesn't have to retrain every time it starts. Next to the model, the file stores the list of features, a fingerprint (SHA-256 hash) of `dataset.csv` and the scikit-learn version.
-
-When the app starts, it loads the saved model if everything still matches. It trains a new model and saves it again automatically when:
-
-- the `.joblib` file doesn't exist yet (for example on a fresh clone),
-- `dataset.csv` has changed,
-- the dataset columns have changed,
-- a different scikit-learn version is installed (saved models aren't guaranteed to work across versions),
-- or the file can't be read.
-
-### Retraining
-
-To retrain on new data, regenerate or edit `dataset.csv` and restart the app; the changed fingerprint triggers a retrain. To retrain and save by hand, run:
-
-```bash
-python -m model.love_predictor
-```
-
-`LovePredictor.append_data()` can also add new labeled rows (with `will_have_relationship` filled in) and save them to the CSV. They are used the next time the model is trained.
 
 ## Getting started
 
@@ -209,7 +117,7 @@ To change the number of rows or the hidden formula, edit `generate_dataset.py` a
 python generate_dataset.py
 ```
 
-The current model reaches about 68.5% accuracy on held-out data (see [Training and evaluation](#training-and-evaluation)).
+The current model reaches about 68.5% accuracy on held-out data.
 
 ## Customization
 
