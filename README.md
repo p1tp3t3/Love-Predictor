@@ -8,7 +8,7 @@ A playful web app that guesses your chance of finding a relationship, explains w
 
 - **Love forecast:** answer 11 simple questions and a logistic regression model predicts your chance of finding a relationship as a percentage.
 - **Insights:** see how you compare with the average person, what share of people have a lower chance than you, and which of your answers raise or lower your chance the most.
-- **AI tips:** get three personal, 3-sentence tips written by a small language model, each focused on the change that would help you most.
+- **AI tips:** press **Get my tips** for three personal, 3-sentence tips written by a small language model, each focused on the change that would help you most.
 - **Friendly design:** hand-drawn, doodle-style pages with page transitions, sliders and a description under every question.
 
 ## Screenshots
@@ -45,7 +45,7 @@ python main.py
 
 Then open http://127.0.0.1:5001 in your browser.
 
-The first start takes a little longer because the AI model is downloaded and loaded. Tips take about a minute to generate on a regular CPU, so the forecast and insights show up first and the tips appear when they are ready.
+The first start takes a little longer because the AI model is downloaded and loaded. Tips take about a minute to generate on a regular CPU, so the forecast and insights show up right away and tips are only written when you press **Get my tips**.
 
 ### Run with Docker
 
