@@ -1,0 +1,603 @@
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #4a3540;
+            --ink-soft: #8a6b78;
+            --pink: #ff8fab;
+            --pink-dark: #e05780;
+            --pink-light: #ffe5ec;
+            --mint: #b8f2e6;
+            --lemon: #fff3b0;
+            --lavender: #e2d4f7;
+            --paper: #fffdf8;
+            --green: #1f7a52;
+            /* Uneven corners make boxes look hand-drawn */
+            --wobble: 255px 15px 225px 15px / 15px 225px 15px 255px;
+            --wobble-alt: 15px 255px 15px 225px / 225px 15px 255px 15px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 48px 16px;
+            font-family: 'Patrick Hand', 'Comic Sans MS', cursive;
+            font-size: 18px;
+            color: var(--ink);
+            /* Dotted notebook paper */
+            background-color: #fff6f9;
+            background-image: radial-gradient(#f7c6d4 1.2px, transparent 1.2px);
+            background-size: 22px 22px;
+            overflow-x: hidden;
+        }
+
+        /* Floating doodle hearts and stars in the background */
+        .doodles span {
+            position: fixed;
+            z-index: 0;
+            pointer-events: none;
+            color: var(--pink);
+            opacity: 0.55;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .doodles span:nth-child(1) { top: 8%;  left: 6%;  font-size: 42px; animation-delay: 0s; }
+        .doodles span:nth-child(2) { top: 22%; right: 8%; font-size: 30px; animation-delay: 1s; color: #c9a7eb; }
+        .doodles span:nth-child(3) { top: 55%; left: 4%;  font-size: 28px; animation-delay: 2s; color: #f6c453; }
+        .doodles span:nth-child(4) { top: 75%; right: 5%; font-size: 46px; animation-delay: 0.5s; }
+        .doodles span:nth-child(5) { top: 90%; left: 12%; font-size: 26px; animation-delay: 1.5s; color: #7fd8be; }
+        .doodles span:nth-child(6) { top: 4%;  right: 28%; font-size: 24px; animation-delay: 2.5s; color: #f6c453; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(-6deg); }
+            50%      { transform: translateY(-14px) rotate(6deg); }
+        }
+
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(-1deg); }
+            50%      { transform: rotate(1deg); }
+        }
+
+        @keyframes beat {
+            0%, 100% { transform: scale(1); }
+            50%      { transform: scale(1.2); }
+        }
+
+        /* ---------- Page transitions ---------- */
+
+        /* The card floats up into place when a page opens... */
+        @keyframes page-enter {
+            from { opacity: 0; transform: translateY(48px) rotate(1.5deg) scale(0.97); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        /* ...and drifts away when leaving */
+        @keyframes page-leave {
+            to { opacity: 0; transform: translateY(-48px) rotate(-2deg) scale(0.95); }
+        }
+
+        @keyframes heart-pop {
+            0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.2) rotate(-20deg); }
+            60%  { opacity: 1; transform: translate(-50%, -50%) scale(1.25) rotate(8deg); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); }
+        }
+
+        .card {
+            animation: page-enter 0.7s cubic-bezier(0.2, 0.8, 0.3, 1.15) both;
+        }
+
+        body.page-leave .card {
+            animation: page-leave 0.45s ease-in forwards;
+        }
+
+        /* Big heart that pops up in the middle while switching pages */
+        .transition-heart {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            z-index: 10;
+            font-size: 120px;
+            color: var(--pink-dark);
+            text-shadow: 5px 5px 0 var(--pink-light);
+            pointer-events: none;
+            animation: heart-pop 0.5s ease-out forwards;
+        }
+
+        /* Sections that appear one after another */
+        .reveal {
+            animation: page-enter 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.15) both;
+            animation-delay: var(--delay, 0s);
+        }
+
+        /* Tips keep their sticky-note tilt, so they animate with translate instead of transform */
+        @keyframes tip-in {
+            from { opacity: 0; translate: 0 24px; }
+            to   { opacity: 1; translate: 0 0; }
+        }
+
+        .tip.reveal {
+            animation-name: tip-in;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-delay: 0s !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ---------- Card and headings ---------- */
+
+        .card {
+            position: relative;
+            z-index: 1;
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 40px 36px 36px;
+            background: var(--paper);
+            border: 3px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: 8px 8px 0 var(--pink);
+        }
+
+        /* Strip of "tape" holding the card down */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -16px;
+            left: 50%;
+            width: 130px;
+            height: 32px;
+            transform: translateX(-50%) rotate(-3deg);
+            background: rgba(255, 243, 176, 0.85);
+            border: 2px dashed #e8d27a;
+        }
+
+        h1 {
+            margin: 0;
+            text-align: center;
+            font-family: 'Gaegu', cursive;
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--pink-dark);
+            text-shadow: 3px 3px 0 var(--pink-light);
+        }
+
+        h1 .heart {
+            display: inline-block;
+            animation: beat 1.4s ease-in-out infinite;
+        }
+
+        .subtitle {
+            margin: 4px 0 32px;
+            text-align: center;
+            color: var(--ink-soft);
+        }
+
+        .subtitle u {
+            text-decoration: underline wavy var(--pink);
+            text-underline-offset: 4px;
+        }
+
+        /* ---------- Form ---------- */
+
+        form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 24px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 14px 16px;
+            background: #fff;
+            border: 2px dashed #f2b8c6;
+            border-radius: var(--wobble-alt);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .field:nth-child(4n + 1) { background: #fffafc; }
+        .field:nth-child(4n + 2) { background: #f9fffd; }
+        .field:nth-child(4n + 3) { background: #fffef5; }
+        .field:nth-child(4n + 4) { background: #fbf8ff; }
+
+        .field:hover,
+        .field:focus-within {
+            transform: rotate(-0.6deg) scale(1.01);
+            border-color: var(--pink);
+        }
+
+        .field.full {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-family: 'Gaegu', cursive;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .hint {
+            margin: 0 0 6px;
+            font-size: 15px;
+            line-height: 1.3;
+            color: var(--ink-soft);
+        }
+
+        input,
+        select {
+            padding: 8px 12px;
+            font-size: 18px;
+            font-family: inherit;
+            color: inherit;
+            background: #fff;
+            border: 2px solid var(--ink);
+            border-radius: var(--wobble);
+            transition: box-shadow 0.2s;
+        }
+
+        input::placeholder {
+            color: #c4adb6;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            box-shadow: 3px 3px 0 var(--pink);
+        }
+
+        /* Doodle-style sliders for the 1-10 questions */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 14px;
+            padding: 0;
+            margin: 8px 0 4px;
+            background: var(--pink-light);
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 26px;
+            height: 26px;
+            background: var(--pink);
+            border: 2px solid var(--ink);
+            border-radius: 50%;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            background: var(--pink);
+            border: 2px solid var(--ink);
+            border-radius: 50%;
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: var(--ink-soft);
+        }
+
+        .range-labels output {
+            min-width: 34px;
+            padding: 0 8px;
+            text-align: center;
+            font-family: 'Gaegu', cursive;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--pink-dark);
+            background: #fff;
+            border: 2px solid var(--ink);
+            border-radius: 999px;
+        }
+
+        /* ---------- Buttons ---------- */
+
+        .btn {
+            display: block;
+            grid-column: 1 / -1;
+            justify-self: center;
+            margin: 12px auto 0;
+            padding: 12px 48px;
+            font-family: 'Gaegu', cursive;
+            font-size: 26px;
+            font-weight: 700;
+            color: #fff;
+            background: var(--pink-dark);
+            border: 3px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: 5px 5px 0 var(--ink);
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .btn:hover {
+            animation: wiggle 0.3s ease-in-out infinite;
+        }
+
+        .btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 1px 1px 0 var(--ink);
+        }
+
+        .btn:disabled {
+            background: #f2a7bd;
+            cursor: wait;
+            animation: none;
+        }
+
+        .btn.secondary {
+            color: var(--ink);
+            background: var(--lemon);
+        }
+
+        .form-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 16px 20px;
+            grid-column: 1 / -1;
+            margin-top: 12px;
+        }
+
+        .form-actions .btn {
+            margin: 0;
+        }
+
+        /* ---------- Result page ---------- */
+
+        .panel {
+            margin-top: 28px;
+            padding: 24px;
+            background: var(--pink-light);
+            border: 3px solid var(--ink);
+            border-radius: var(--wobble-alt);
+            box-shadow: 6px 6px 0 var(--lavender);
+        }
+
+        .panel:first-of-type {
+            margin-top: 0;
+        }
+
+        .panel h2 {
+            margin: 0 0 10px;
+            font-family: 'Gaegu', cursive;
+            font-size: 30px;
+            color: var(--pink-dark);
+        }
+
+        .panel p {
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .panel.error {
+            background: #ffe3e3;
+            color: #a12626;
+        }
+
+        .panel.insights {
+            background: #f4fffb;
+            box-shadow: 6px 6px 0 var(--mint);
+        }
+
+        .panel.tips {
+            background: #fffdf0;
+            box-shadow: 6px 6px 0 var(--lemon);
+        }
+
+        .muted {
+            color: var(--ink-soft);
+        }
+
+        .loading-heart {
+            display: inline-block;
+            animation: beat 0.8s ease-in-out infinite;
+        }
+
+        .big-percent {
+            margin: 6px 0 2px;
+            text-align: center;
+            font-family: 'Gaegu', cursive;
+            font-size: 84px;
+            font-weight: 700;
+            line-height: 1;
+            color: var(--pink-dark);
+            text-shadow: 4px 4px 0 #fff;
+        }
+
+        .big-percent-label {
+            text-align: center;
+            color: var(--ink-soft);
+        }
+
+        .verdict {
+            margin-top: 14px !important;
+            font-size: 20px;
+            text-align: center;
+        }
+
+        .bar {
+            height: 22px;
+            margin-top: 14px;
+            overflow: hidden;
+            background: #fff;
+            border: 2px solid var(--ink);
+            border-radius: var(--wobble);
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 0;
+            /* Candy stripes */
+            background: repeating-linear-gradient(-45deg, var(--pink), var(--pink) 10px, #ffb3c6 10px, #ffb3c6 20px);
+            transition: width 1s ease;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin: 6px 0 22px;
+        }
+
+        .stat {
+            padding: 12px 10px;
+            text-align: center;
+            background: #fff;
+            border: 2px solid var(--ink);
+            border-radius: var(--wobble);
+        }
+
+        .stat-value {
+            font-family: 'Gaegu', cursive;
+            font-size: 34px;
+            font-weight: 700;
+            line-height: 1.1;
+            color: var(--pink-dark);
+        }
+
+        .stat-label {
+            font-size: 15px;
+            line-height: 1.25;
+            color: var(--ink-soft);
+        }
+
+        .insight-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        .insight-columns h3 {
+            margin: 0 0 8px;
+            font-family: 'Gaegu', cursive;
+            font-size: 23px;
+        }
+
+        .insight-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .insight-list li {
+            position: relative;
+            margin-bottom: 10px;
+            padding: 10px 12px 10px 38px;
+            line-height: 1.35;
+            background: #fff;
+            border: 2px dashed #c9e9df;
+            border-radius: var(--wobble-alt);
+        }
+
+        .insight-list li::before {
+            position: absolute;
+            top: 9px;
+            left: 12px;
+            font-size: 18px;
+        }
+
+        .insight-list.strengths li::before {
+            content: '\2714';
+            color: var(--green);
+        }
+
+        .insight-list.challenges li {
+            border-color: #f6cbd6;
+        }
+
+        .insight-list.challenges li::before {
+            content: '\2740';
+            color: var(--pink-dark);
+        }
+
+        .tips h2 + .muted {
+            margin-top: 4px;
+        }
+
+        .tip {
+            position: relative;
+            margin-top: 16px;
+            padding: 16px 18px;
+            background: var(--lemon);
+            border: 2px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: 3px 3px 0 rgba(74, 53, 64, 0.25);
+        }
+
+        /* Sticky notes in different colors, slightly tilted */
+        .tip:nth-of-type(3n + 1) { background: var(--lemon);    transform: rotate(-0.8deg); }
+        .tip:nth-of-type(3n + 2) { background: var(--mint);     transform: rotate(0.7deg); }
+        .tip:nth-of-type(3n + 3) { background: var(--lavender); transform: rotate(-0.5deg); }
+
+        .tip-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 6px;
+            font-family: 'Gaegu', cursive;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .tip-label::before {
+            content: '\2661  ';
+            color: var(--pink-dark);
+        }
+
+        .tip-gain {
+            padding: 0 10px;
+            font-size: 17px;
+            color: var(--green);
+            white-space: nowrap;
+            background: #fff;
+            border: 2px solid var(--green);
+            border-radius: 999px;
+        }
+
+        .footer-note {
+            margin: 28px 0 0;
+            text-align: center;
+            font-size: 15px;
+            color: var(--ink-soft);
+        }
+
+        @media (max-width: 600px) {
+            .card {
+                padding: 32px 18px 24px;
+            }
+
+            h1 {
+                font-size: 38px;
+            }
+
+            form,
+            .insight-columns {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .doodles {
+                display: none;
+            }
+        }
+    </style>

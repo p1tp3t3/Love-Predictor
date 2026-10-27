@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relationship Predictor</title>
+{% include '_styles.html' %}
+</head>
+<body>
+    <div class="doodles" aria-hidden="true">
+        <span>&#9825;</span>
+        <span>&#10022;</span>
+        <span>&#9733;</span>
+        <span>&#10084;</span>
+        <span>&#10047;</span>
+        <span>&#10022;</span>
+    </div>
+
+    <div class="card">
+        <h1><span class="heart">&#9825;</span> Relationship Predictor <span class="heart">&#9825;</span></h1>
+        <p class="subtitle">Answer a few easy questions and we'll guess if <u>love</u> is coming your way, plus give you tips to boost your chances!</p>
+
+        <form id="predict-form">
+            <div class="field full">
+                <label for="name">What's your name?</label>
+                <p class="hint" id="name-hint">Just your first name or a nickname, so we can say hi.</p>
+                <input type="text" id="name" name="name" placeholder="e.g. Alex" aria-describedby="name-hint" required>
+            </div>
+            <div class="field">
+                <label for="age">How old are you?</label>
+                <p class="hint" id="age-hint">Your age in years. You need to be 18 or older.</p>
+                <input type="number" id="age" name="age" min="18" max="100" placeholder="e.g. 25" aria-describedby="age-hint" required>
+            </div>
+            <div class="field">
+                <label for="sex">What's your sex?</label>
+                <p class="hint" id="sex-hint">Are you male or female?</p>
+                <select id="sex" name="sex" aria-describedby="sex-hint" required>
+                    <option value="0">Male</option>
+                    <option value="1">Female</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="past_relationships">How many past relationships?</label>
+                <p class="hint" id="past_relationships-hint">Count the serious ones, like a boyfriend or girlfriend. Type 0 if you haven't had one yet, that's okay!</p>
+                <input type="number" id="past_relationships" name="past_relationships" min="0" placeholder="e.g. 2" aria-describedby="past_relationships-hint" required>
+            </div>
+            <div class="field">
+                <label for="years_single">How long have you been single?</label>
+                <p class="hint" id="years_single-hint">In years. Use 0.5 for six months or 0 if you just became single. Never been in one? Put how many years since you turned 18.</p>
+                <input type="number" id="years_single" name="years_single" min="0" step="0.1" placeholder="e.g. 1.5" aria-describedby="years_single-hint" required>
+            </div>
+            <div class="field">
+                <label for="social_activity">How social are you?</label>
+                <p class="hint" id="social_activity-hint">Slide left if you love staying home, right if you're always out with people.</p>
+                <input type="range" id="social_activity" name="social_activity" min="1" max="10" value="5" aria-describedby="social_activity-hint">
+                <div class="range-labels"><span>&#127968; Homebody</span><output for="social_activity">5</output><span>Party star &#127881;</span></div>
+            </div>
+            <div class="field">
+                <label for="confidence">How confident do you feel?</label>
+                <p class="hint" id="confidence-hint">When you meet someone new. Slide left if you're shy, right if you feel very sure of yourself.</p>
+                <input type="range" id="confidence" name="confidence" min="1" max="10" value="5" aria-describedby="confidence-hint">
+                <div class="range-labels"><span>&#128584; Shy</span><output for="confidence">5</output><span>Very sure &#128526;</span></div>
+            </div>
+            <div class="field">
+                <label for="hobbies_count">How many hobbies do you have?</label>
+                <p class="hint" id="hobbies_count-hint">Things you do for fun often, like sports, music, drawing, cooking or games.</p>
+                <input type="number" id="hobbies_count" name="hobbies_count" min="0" placeholder="e.g. 3" aria-describedby="hobbies_count-hint" required>
+            </div>
+            <div class="field">
+                <label for="friends_count">How many close friends?</label>
+                <p class="hint" id="friends_count-hint">Friends you actually talk to or hang out with, not just people you follow online.</p>
+                <input type="number" id="friends_count" name="friends_count" min="0" placeholder="e.g. 10" aria-describedby="friends_count-hint" required>
+            </div>
+            <div class="field">
+                <label for="uses_dating_apps">Do you use dating apps?</label>
+                <p class="hint" id="uses_dating_apps-hint">Apps on your phone for meeting people, like Tinder, Bumble or Hinge.</p>
+                <select id="uses_dating_apps" name="uses_dating_apps" aria-describedby="uses_dating_apps-hint" required>
+                    <option value="1">Yes, I do</option>
+                    <option value="0">No, I don't</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="goes_out_per_month">How often do you go out?</label>
+                <p class="hint" id="goes_out_per_month-hint">Times in a usual month you go out to see people, like parties, cafes, events or trips with friends.</p>
+                <input type="number" id="goes_out_per_month" name="goes_out_per_month" min="0" placeholder="e.g. 4" aria-describedby="goes_out_per_month-hint" required>
+            </div>
+            <div class="form-actions">
+                <button type="reset" class="btn secondary">Clear &#10006;</button>
+                <button type="submit" class="btn">See my love forecast &#9825;</button>
+            </div>
+        </form>
+
+        <p class="footer-note">Just for fun! This is a playful guess, not real relationship advice. Nothing you type is saved. &#10047;</p>
+    </div>
+
+    <script>
+        const form = document.getElementById('predict-form');
+        const STORAGE_KEY = 'loveForecastAnswers';
+
+        // Show the current number next to each slider as it moves
+        const sliders = form.querySelectorAll('input[type="range"]');
+        const updateBubble = slider => {
+            form.querySelector(`output[for="${slider.id}"]`).textContent = slider.value;
+        };
+        sliders.forEach(slider => slider.addEventListener('input', () => updateBubble(slider)));
+
+        // Fill the form back in when coming back from the result page
+        const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
+        if (saved) {
+            Object.entries(saved).forEach(([name, value]) => {
+                if (form.elements[name]) form.elements[name].value = value;
+            });
+            sliders.forEach(updateBubble);
+        }
+
+        // Clear button: empty every answer and forget the saved ones
+        form.addEventListener('reset', () => {
+            sessionStorage.removeItem(STORAGE_KEY);
+            // The browser resets the values right after this event, so update the sliders a moment later
+            setTimeout(() => {
+                sliders.forEach(updateBubble);
+                form.elements.name.focus();
+            });
+        });
+
+        // Play the leaving animation, then open the result page
+        const goTo = url => {
+            document.body.classList.add('page-leave');
+            const heart = document.createElement('div');
+            heart.className = 'transition-heart';
+            heart.innerHTML = '&#9825;';
+            document.body.appendChild(heart);
+            setTimeout(() => { window.location.href = url; }, 550);
+        };
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(form));
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            goTo('/result');
+        });
+
+        // Browsers may restore this page from cache on "Back", so undo the leaving animation
+        window.addEventListener('pageshow', (e) => {
+            if (!e.persisted) return;
+            document.body.classList.remove('page-leave');
+            document.querySelectorAll('.transition-heart').forEach(heart => heart.remove());
+        });
+    </script>
+</body>
+</html>

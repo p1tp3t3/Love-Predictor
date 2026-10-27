@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Love Forecast - Relationship Predictor</title>
+{% include '_styles.html' %}
+</head>
+<body>
+    <div class="doodles" aria-hidden="true">
+        <span>&#9825;</span>
+        <span>&#10022;</span>
+        <span>&#9733;</span>
+        <span>&#10084;</span>
+        <span>&#10047;</span>
+        <span>&#10022;</span>
+    </div>
+
+    <div class="card">
+        <h1><span class="heart">&#9825;</span> Your Love Forecast <span class="heart">&#9825;</span></h1>
+        <p class="subtitle" id="greeting">Here's what we found out about you!</p>
+
+        <div id="content">
+            <div class="panel">
+                <p><span class="loading-heart">&#9825;</span> Working out your love forecast...</p>
+            </div>
+        </div>
+
+        <button type="button" class="btn secondary" id="back-button" style="margin-top: 32px;">&#8592; Change my answers</button>
+
+        <p class="footer-note">Just for fun! This is a playful guess, not real relationship advice. Nothing you type is saved. &#10047;</p>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'loveForecastAnswers';
+        const content = document.getElementById('content');
+        const answers = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
+
+        // Friendly titles for each tip, instead of technical field names
+        const TIP_TITLES = {
+            social_activity: 'Be a little more social',
+            confidence: 'Build up your confidence',
+            hobbies_count: 'Pick up a new hobby',
+            friends_count: 'Make some new friends',
+            uses_dating_apps: 'Give dating apps a try',
+            goes_out_per_month: 'Go out a bit more often',
+        };
+
+        // Short names used inside insight sentences
+        const FACTOR_NAMES = {
+            past_relationships: 'your past relationships',
+            years_single: 'how long you have been single',
+            social_activity: 'how social you are',
+            confidence: 'your confidence',
+            hobbies_count: 'your hobbies',
+            friends_count: 'your circle of friends',
+            uses_dating_apps: 'using dating apps',
+            goes_out_per_month: 'how often you go out',
+        };
+
+        const FRIENDLY_ERROR = "Oops! Something went wrong on our side. Please go back, check that every question is answered and try again.";
+
+        const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+        const round1 = n => Math.round(n * 10) / 10;
+        const percent = p => Math.round(p * 100);
+
+        // Describes how far an answer is from the average, so the wording changes with the numbers
+        const compare = (value, average) => {
+            if (average <= 0) return value > 0 ? 'more than' : 'about the same as';
+            const ratio = value / average;
+            if (ratio >= 1.5) return 'way more than';
+            if (ratio > 1.1) return 'more than';
+            if (ratio <= 0.6) return 'a lot less than';
+            if (ratio < 0.9) return 'a bit less than';
+            return 'about the same as';
+        };
+
+        // Builds a sentence for one factor using this person's own answer and the dataset average
+        const describeFactor = factor => {
+            const v = round1(factor.value);
+            const avg = round1(factor.average);
+            const cmp = compare(factor.value, factor.average);
+            let fact;
+            switch (factor.feature) {
+                case 'past_relationships':
+                    fact = `You've had ${plural(v, 'past relationship')}, ${cmp} most people (about ${avg}).`;
+                    break;
+                case 'years_single':
+                    fact = `You've been single for ${plural(v, 'year')}, ${cmp} the usual ${avg} years.`;
+                    break;
+                case 'social_activity':
+                    fact = `You rated how social you are ${v}/10, ${cmp} the average of ${avg}/10.`;
+                    break;
+                case 'confidence':
+                    fact = `You rated your confidence ${v}/10, ${cmp} the average of ${avg}/10.`;
+                    break;
+                case 'hobbies_count':
+                    fact = `You have ${plural(v, 'hobby').replace('hobbys', 'hobbies')}, ${cmp} most people (about ${avg}).`;
+                    break;
+                case 'friends_count':
+                    fact = `You have ${plural(v, 'close friend')}, ${cmp} most people (about ${avg}).`;
+                    break;
+                case 'goes_out_per_month':
+                    fact = `You go out about ${plural(v, 'time')} a month, ${cmp} most people (about ${avg}).`;
+                    break;
+                case 'uses_dating_apps':
+                    fact = factor.value >= 1
+                        ? `You use dating apps, which only about ${percent(factor.average)}% of people do.`
+                        : `You don't use dating apps, while about ${percent(factor.average)}% of people do.`;
+                    break;
+                default:
+                    fact = '';
+            }
+            const points = Math.max(1, percent(Math.abs(factor.impact)));
+            const effect = factor.impact > 0
+                ? `This adds about +${points}% to your chance.`
+                : `This lowers your chance by about ${points}%.`;
+            return `${fact} ${effect}`;
+        };
+
+        // One-paragraph summary that changes with the person's results
+        const summarize = (result, insights) => {
+            const mine = percent(result.probability);
+            const avg = percent(insights.average_probability);
+            const gap = mine - avg;
+            let text;
+            if (gap >= 10) text = `Your chance is well above the average person's ${avg}%.`;
+            else if (gap > 2) text = `Your chance is a little above the average person's ${avg}%.`;
+            else if (gap <= -10) text = `Your chance is below the average person's ${avg}%, but that can change quickly.`;
+            else if (gap < -2) text = `Your chance is a little below the average person's ${avg}%.`;
+            else text = `Your chance is right around the average person's ${avg}%.`;
+
+            const best = insights.strengths[0];
+            const worst = insights.challenges[0];
+            if (best) text += ` Your biggest boost comes from ${FACTOR_NAMES[best.feature]}.`;
+            if (worst) text += ` The thing holding you back the most is ${FACTOR_NAMES[worst.feature]}.`;
+            if (!best && !worst) text += ' Your answers are quite balanced, nothing is pulling you strongly up or down.';
+            return text;
+        };
+
+        const postJson = (url, data) => fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(async response => {
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || 'Network response was not ok');
+            }
+            return result;
+        });
+
+        // Small helper to create an element with a class and safe text
+        const el = (tag, className, text) => {
+            const node = document.createElement(tag);
+            if (className) node.className = className;
+            if (text !== undefined) node.textContent = text;
+            return node;
+        };
+
+        const renderForecast = result => {
+            const panel = el('div', 'panel reveal');
+            const chance = percent(result.probability);
+            const verdict = result.prediction === 1
+                ? `Good news, ${answers.name}! Love looks likely for you. You have a good chance of finding a relationship soon.`
+                : `Not quite yet, ${answers.name}, but don't worry! There are easy ways to raise your chance, and we'll show you how below.`;
+            panel.append(
+                el('div', 'big-percent', `${chance}%`),
+                el('div', 'big-percent-label', 'chance of finding love'),
+            );
+            const bar = el('div', 'bar');
+            bar.title = 'Your chance of finding love';
+            const fill = el('div', 'bar-fill');
+            bar.appendChild(fill);
+            panel.append(bar, el('p', 'verdict', verdict));
+            // Fill the bar after the card has floated in
+            setTimeout(() => { fill.style.width = `${chance}%`; }, 500);
+            return panel;
+        };
+
+        const renderInsights = (result, insights) => {
+            const panel = el('div', 'panel insights reveal');
+            panel.style.setProperty('--delay', '0.25s');
+            panel.appendChild(el('h2', '', 'What we noticed about you'));
+
+            const stats = el('div', 'stats');
+            [
+                [`${percent(result.probability)}%`, 'your chance'],
+                [`${percent(insights.average_probability)}%`, 'the average person'],
+                [`${percent(insights.percentile)}%`, 'of people have a lower chance than you'],
+            ].forEach(([value, label]) => {
+                const stat = el('div', 'stat');
+                stat.append(el('div', 'stat-value', value), el('div', 'stat-label', label));
+                stats.appendChild(stat);
+            });
+            panel.appendChild(stats);
+
+            panel.appendChild(el('p', '', summarize(result, insights)));
+
+            const columns = el('div', 'insight-columns');
+            columns.style.marginTop = '18px';
+            [
+                ["What's working for you", 'strengths', insights.strengths, 'Nothing is giving you a big boost yet, and that just means there is lots of room to grow!'],
+                ["What's holding you back", 'challenges', insights.challenges, 'Nothing is really holding you back. Great job!'],
+            ].forEach(([title, kind, factors, empty]) => {
+                const column = el('div');
+                column.appendChild(el('h3', '', title));
+                if (factors.length === 0) {
+                    column.appendChild(el('p', 'muted', empty));
+                } else {
+                    const list = el('ul', `insight-list ${kind}`);
+                    factors.forEach(factor => list.appendChild(el('li', '', describeFactor(factor))));
+                    column.appendChild(list);
+                }
+                columns.appendChild(column);
+            });
+            panel.appendChild(columns);
+            return panel;
+        };
+
+        const renderTipsLoading = () => {
+            const panel = el('div', 'panel tips reveal');
+            panel.style.setProperty('--delay', '0.5s');
+            panel.appendChild(el('h2', '', 'Little ways to boost your chances'));
+            const loading = el('p', 'muted');
+            loading.innerHTML = '<span class="loading-heart">&#9825;</span> Thinking of some tips just for you... this can take a minute or two, so hang tight!';
+            panel.appendChild(loading);
+            return panel;
+        };
+
+        const renderTips = (panel, result) => {
+            panel.querySelectorAll('p, .tip').forEach(node => node.remove());
+            if (result.recommendations.length === 0) {
+                panel.appendChild(el('p', 'muted', "You're already doing great on everything you can change. Keep being you!"));
+                return;
+            }
+            result.recommendations.forEach((rec, i) => {
+                const tip = el('div', 'tip reveal');
+                tip.style.setProperty('--delay', `${i * 0.15}s`);
+                const header = el('div', 'tip-header');
+                const boost = Math.max(1, percent(rec.gain));
+                const gain = el('span', 'tip-gain', `up to +${boost}% chance`);
+                gain.title = `Trying this could raise your chance by about ${boost} percent`;
+                header.append(el('span', 'tip-label', TIP_TITLES[rec.feature] || rec.label), gain);
+                tip.append(header, el('p', '', rec.tip));
+                panel.appendChild(tip);
+            });
+        };
+
+        const showError = () => {
+            const panel = el('div', 'panel error reveal');
+            panel.appendChild(el('p', '', FRIENDLY_ERROR));
+            content.replaceChildren(panel);
+        };
+
+        // Play the leaving animation, then open another page
+        const goTo = url => {
+            document.body.classList.add('page-leave');
+            const heart = el('div', 'transition-heart');
+            heart.innerHTML = '&#9825;';
+            document.body.appendChild(heart);
+            setTimeout(() => { window.location.href = url; }, 550);
+        };
+
+        document.getElementById('back-button').addEventListener('click', () => goTo('/'));
+
+        window.addEventListener('pageshow', (e) => {
+            if (!e.persisted) return;
+            document.body.classList.remove('page-leave');
+            document.querySelectorAll('.transition-heart').forEach(heart => heart.remove());
+        });
+
+        if (!answers) {
+            // Nobody filled in the form yet, so send them to it
+            window.location.replace('/');
+        } else {
+            document.getElementById('greeting').textContent = `Hi ${answers.name}! Here's what we found out about you.`;
+
+            postJson('/api/model/predict', answers)
+                .then(result => {
+                    const tipsPanel = renderTipsLoading();
+                    content.replaceChildren(renderForecast(result), renderInsights(result, result.insights), tipsPanel);
+
+                    // Tips are generated by a transformer model and can take a while, so load them separately
+                    postJson('/api/model/recommend', answers)
+                        .then(recs => renderTips(tipsPanel, recs))
+                        .catch(error => {
+                            tipsPanel.querySelectorAll('p').forEach(node => node.remove());
+                            tipsPanel.appendChild(el('p', 'muted', "Sorry, we couldn't come up with tips this time. Please refresh the page to try again."));
+                            console.error('Tips error:', error);
+                        });
+                })
+                .catch(error => {
+                    showError();
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+</body>
+</html>
