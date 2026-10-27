@@ -1,4 +1,4 @@
-# Relationship Predictor 💕
+# Love Predictor 💕
 
 A playful web app that guesses your chance of finding a relationship, explains what is helping or holding you back, and gives you personal AI-written tips to boost your chances.
 
