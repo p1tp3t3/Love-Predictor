@@ -233,15 +233,23 @@
             button.addEventListener('click', () => {
                 button.disabled = true;
                 button.textContent = 'Writing your tips...';
-                panel.querySelectorAll('p').forEach(node => node.remove());
+                // Old tips stay visible until the new ones arrive; only clear earlier messages
+                panel.querySelectorAll(':scope > p').forEach(node => node.remove());
                 const loading = el('p', 'muted');
                 loading.innerHTML = '<span class="loading-heart">&#9825;</span> Thinking of some tips just for you... this can take a minute or two, so hang tight!';
                 panel.insertBefore(loading, button);
 
                 postJson('/api/model/recommend', answers)
                     .then(recs => {
-                        button.remove();
                         renderTips(panel, recs);
+                        // Keep the button under the tips so a fresh set can be written
+                        if (recs.recommendations.length === 0) {
+                            button.remove();
+                            return;
+                        }
+                        button.disabled = false;
+                        button.textContent = 'Get new tips';
+                        panel.appendChild(button);
                     })
                     .catch(error => {
                         loading.remove();
