@@ -9,6 +9,7 @@ A playful web app that guesses your chance of finding a relationship, explains w
 - **Love forecast:** answer 11 simple questions and a logistic regression model predicts your chance of finding a relationship as a percentage.
 - **Insights:** see how you compare with the average person, what share of people have a lower chance than you, and which of your answers raise or lower your chance the most.
 - **AI tips:** press **Get my tips** for three personal, 3-sentence tips written by a small language model, each focused on the change that would help you most.
+- **Learns from real stories:** people who already know how their year went can share their story, and the model retrains on those real answers.
 - **Friendly design:** hand-drawn, doodle-style pages with page transitions, sliders and a description under every question.
 
 ## Screenshots
@@ -61,6 +62,7 @@ Then open http://localhost:5001.
 - **Build time and size:** the first build takes a few minutes and the image is about 4 GB, because it includes PyTorch and the AI model. Later builds are much faster when only the code changes.
 - **Works offline:** the AI model and the trained prediction model are built into the image, so the container runs without an internet connection.
 - **Production server:** the image runs the app with [gunicorn](https://gunicorn.org/) instead of Flask's development server. To use a different port, set the `PORT` variable, for example `docker run -e PORT=8080 -p 8080:8080 love-predictor`.
+- **Keep shared stories:** real answers from the story page are saved in the container's `data` folder. Add a volume so they survive when the container is replaced: `docker run -p 5001:5001 -v love-data:/home/user/app/data love-predictor`.
 - **Open it on other devices:** the container listens on your whole local network, so phones and laptops on the same Wi-Fi can open `http://<this computer's IP>:5001` (on Windows, find the IP with `ipconfig`; on macOS or Linux, `ipconfig getifaddr en0` or `hostname -I`). If it doesn't load, allow port 5001 through your computer's firewall. To keep it private to your computer, run `docker run -p 127.0.0.1:5001:5001 love-predictor` instead.
 - **Stop it:** press Ctrl + C, or run `docker ps` to find the container and `docker stop <container id>`.
 
@@ -89,7 +91,7 @@ love-predictor/
 │   └── recommender.py            # AI-written tips using Hugging Face transformers
 └── templates/
     ├── _styles.html              # Shared doodle-style CSS, included in both pages
-    ├── index.html                # Question form
+    ├── index.html                # First page: share your story, or switch to the forecast form
     └── result.html               # Forecast, insights and tips
 ```
 
@@ -101,6 +103,7 @@ All endpoints take and return JSON.
 |---|---|---|
 | `POST` | `/api/model/predict` | Returns `prediction` (0 or 1), `probability` and `insights` |
 | `POST` | `/api/model/recommend` | Returns up to three AI-written `recommendations`. Responds with `503` if the AI model is not available |
+| `POST` | `/api/model/feedback` | Saves one real story: the same fields as below, as they were a year ago, plus `will_have_relationship` (0 or 1). Returns `saved`, `retrained`, `real_answers` and `until_next_update` |
 | `GET` | `/api/model/evaluate` | Returns the model's `accuracy` on a held-out test split |
 
 Example request body for `predict` and `recommend`:
@@ -145,6 +148,17 @@ python generate_dataset.py
 ```
 
 The current model reaches about 68.5% accuracy on held-out data.
+## Learning from real stories
+
+The made-up dataset only teaches the model a made-up formula. To learn from real life, the first page opens on **Share my story**, with **Get my love forecast** next to it (the forecast can also be opened directly at `/forecast`). People who already know how things turned out answer the same questions about how their life was **one year ago**, plus whether they found a relationship since.
+
+- Real answers are saved without names to `data/real_data.csv`, separate from `dataset.csv`.
+- The model retrains once every 50 new real answers (`RETRAIN_EVERY`), and when the app starts with new answers waiting.
+- Each real answer counts three times as much as a made-up row (`REAL_WEIGHT`).
+- Answers outside sensible ranges, and the same story sent twice, are not saved.
+- Accuracy is still measured on the made-up test rows, so it shows whether real stories pull the model away from the made-up formula.
+
+Both settings are at the top of [model/love_predictor.py](model/love_predictor.py). The `data` folder is ignored by git, so people's answers are never committed.
 
 ## Customization
 

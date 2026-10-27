@@ -28,6 +28,8 @@
 
         <button type="button" class="btn secondary" id="back-button" style="margin-top: 32px;">&#8592; Change my answers</button>
 
+        <p class="footer-note">Already know how things turned out for you? <a href="/story" id="story-link">Share your story &#128140;</a> to help the forecast learn from real life.</p>
+
         <p class="footer-note">Just for fun! This is a playful guess, not real relationship advice. Nothing you type is saved. &#10047;</p>
     </div>
 
@@ -296,7 +298,11 @@
             setTimeout(() => { window.location.href = url; }, 550);
         };
 
-        document.getElementById('back-button').addEventListener('click', () => goTo('/'));
+        document.getElementById('back-button').addEventListener('click', () => goTo('/forecast'));
+        document.getElementById('story-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            goTo('/story');
+        });
 
         window.addEventListener('pageshow', (e) => {
             if (!e.persisted) return;
@@ -306,7 +312,7 @@
 
         if (!answers) {
             // Nobody filled in the form yet, so send them to it
-            window.location.replace('/');
+            window.location.replace('/forecast');
         } else {
             document.getElementById('greeting').textContent = `Hi ${answers.name}! Here's what we found out about you.`;
 

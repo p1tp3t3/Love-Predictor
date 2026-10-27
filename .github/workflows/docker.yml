@@ -111,6 +111,14 @@ jobs:
           assert status == 400, 'Missing fields should return 400'
           print('Bad input is rejected')
 
+          assert urllib.request.urlopen(BASE + '/story').status == 200, '/story failed'
+          story = {**person, 'will_have_relationship': 1}
+          status, saved = post('/api/model/feedback', story)
+          assert status == 200 and saved['saved'], saved
+          status, _ = post('/api/model/feedback', {**story, 'age': 5})
+          assert status == 400, 'An impossible age should return 400'
+          print(f"Story saving works: {saved['real_answers']} real answer(s)")
+
           accuracy = json.load(urllib.request.urlopen(BASE + '/api/model/evaluate'))['accuracy']
           assert accuracy >= 0.65, f'Accuracy dropped below 65%: {accuracy:.3f}'
           print(f'Model accuracy: {accuracy:.1%}')

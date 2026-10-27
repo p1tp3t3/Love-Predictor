@@ -26,6 +26,10 @@ COPY --chown=user . .
 # Train and save the prediction model so the first start doesn't have to
 RUN python -m model.love_predictor
 
+# Real answers from the story page are saved here. Mount a volume on it to keep them
+# when the container is replaced: docker run -v love-data:/home/user/app/data ...
+RUN mkdir -p data
+
 # Listen on every network interface, not just localhost, so other devices on your
 # local network (phones, laptops) can open the app through the published port.
 # Same port as running locally; hosting services can override it with the PORT variable

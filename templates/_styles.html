@@ -221,6 +221,68 @@
             grid-column: 1 / -1;
         }
 
+        /* Make "hidden" win over display: grid and flex */
+        [hidden] {
+            display: none !important;
+        }
+
+        /* Choice at the top of the first page: get a forecast or share a story */
+        .mode-choice {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px 16px;
+            margin: -12px 0 28px;
+            padding: 0;
+            border: none;
+        }
+
+        .mode-choice legend {
+            width: 100%;
+            margin-bottom: 8px;
+            text-align: center;
+            font-family: 'Gaegu', cursive;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .mode-choice label {
+            padding: 8px 20px;
+            font-size: 20px;
+            background: #fff;
+            border: 3px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: 3px 3px 0 var(--ink);
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .mode-choice label:hover {
+            transform: rotate(-1deg);
+        }
+
+        .mode-choice input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .mode-choice input:checked + label {
+            color: #fff;
+            background: var(--pink-dark);
+        }
+
+        .mode-choice input:focus-visible + label {
+            outline: 3px dashed var(--pink);
+            outline-offset: 3px;
+        }
+
+        .story-error {
+            grid-column: 1 / -1;
+            margin: 0;
+            text-align: center;
+            color: var(--pink-dark);
+        }
+
         label {
             font-family: 'Gaegu', cursive;
             font-size: 22px;

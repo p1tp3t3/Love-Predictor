@@ -7,8 +7,14 @@ love_predictor = LovePredictor()
 recommender = Recommender()
 
 @app.route('/')
+@app.route('/story')
 def index():
-    return render_template('index.html')
+    # The first page opens on "Share my story"; /forecast opens the same page on "Get my love forecast"
+    return render_template('index.html', mode='story')
+
+@app.route('/forecast')
+def forecast():
+    return render_template('index.html', mode='forecast')
 
 @app.route('/result')
 def result():
@@ -42,6 +48,18 @@ def recommend():
     except RecommenderUnavailable as e:
         app.logger.error('Could not generate tips: %s', e)
         return jsonify({'error': 'Tips are not available right now'}), 503
+
+@app.route('/api/model/feedback', methods=['POST'])
+def feedback():
+    # Real outcomes from the story page, used to retrain the model in batches
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'No input data provided'}), 400
+
+    try:
+        return jsonify(love_predictor.add_story(data))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/api/model/evaluate', methods=['GET'])
 def evaluate():

@@ -8,3 +8,4 @@ docs
 **/*.joblib
 Dockerfile
 .dockerignore
+data

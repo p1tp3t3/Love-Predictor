@@ -18,17 +18,35 @@
 
     <div class="card">
         <h1><span class="heart">&#9825;</span> Love Predictor <span class="heart">&#9825;</span></h1>
-        <p class="subtitle">Answer a few easy questions and we'll guess if <u>love</u> is coming your way, plus give you tips to boost your chances!</p>
+        <!-- Text with a data-story version is swapped when "Share my story" is chosen -->
+        <p class="subtitle" data-story="Help the Love Predictor learn from real life! Think back to one year ago, tell us what things were like, then whether you found love since.">Answer a few easy questions and we'll guess if love is coming your way, plus give you tips to boost your chances!</p>
+
+        <fieldset class="mode-choice" id="mode-choice">
+            <legend>What would you like to do?</legend>
+            <input type="radio" id="mode-story" name="mode" value="story" {% if mode != 'forecast' %}checked{% endif %}>
+            <label for="mode-story">&#128140; Share my story</label>
+            <input type="radio" id="mode-forecast" name="mode" value="forecast" {% if mode == 'forecast' %}checked{% endif %}>
+            <label for="mode-forecast">&#128302; Get my love forecast</label>
+        </fieldset>
 
         <form id="predict-form">
-            <div class="field full">
+            <div class="field full" data-only="story">
+                <label for="will_have_relationship">Did you find a relationship in the past year?</label>
+                <p class="hint" id="will_have_relationship-hint">This is the most important question. Please answer honestly, there's no wrong answer!</p>
+                <select id="will_have_relationship" name="will_have_relationship" aria-describedby="will_have_relationship-hint">
+                    <option value="" disabled selected>Choose one...</option>
+                    <option value="1">Yes, I did &#128149;</option>
+                    <option value="0">No, not yet</option>
+                </select>
+            </div>
+            <div class="field full" data-only="forecast">
                 <label for="name">What's your name?</label>
                 <p class="hint" id="name-hint">Just your first name or a nickname, so we can say hi.</p>
-                <input type="text" id="name" name="name" placeholder="e.g. Alex" aria-describedby="name-hint" required>
+                <input type="text" id="name" name="name" placeholder="e.g. Alex" aria-describedby="name-hint">
             </div>
             <div class="field">
-                <label for="age">How old are you?</label>
-                <p class="hint" id="age-hint">Your age in years. You need to be 18 or older.</p>
+                <label for="age" data-story="How old were you a year ago?">How old are you?</label>
+                <p class="hint" id="age-hint" data-story="Your age in years back then. You need to have been 18 or older.">Your age in years. You need to be 18 or older.</p>
                 <input type="number" id="age" name="age" min="18" max="100" placeholder="e.g. 25" aria-describedby="age-hint" required>
             </div>
             <div class="field">
@@ -40,62 +58,97 @@
                 </select>
             </div>
             <div class="field">
-                <label for="past_relationships">How many past relationships?</label>
-                <p class="hint" id="past_relationships-hint">Count the serious ones, like a boyfriend or girlfriend. Type 0 if you haven't had one yet, that's okay!</p>
-                <input type="number" id="past_relationships" name="past_relationships" min="0" placeholder="e.g. 2" aria-describedby="past_relationships-hint" required>
+                <label for="past_relationships" data-story="How many past relationships did you have?">How many past relationships?</label>
+                <p class="hint" id="past_relationships-hint" data-story="Count the serious ones you'd had before a year ago. Type 0 if you hadn't had one yet.">Count the serious ones, like a boyfriend or girlfriend. Type 0 if you haven't had one yet, that's okay!</p>
+                <input type="number" id="past_relationships" name="past_relationships" min="0" max="50" placeholder="e.g. 2" aria-describedby="past_relationships-hint" required>
             </div>
             <div class="field">
-                <label for="years_single">How long have you been single?</label>
-                <p class="hint" id="years_single-hint">In years. Use 0.5 for six months or 0 if you just became single. Never been in one? Put how many years since you turned 18.</p>
-                <input type="number" id="years_single" name="years_single" min="0" step="0.1" placeholder="e.g. 1.5" aria-describedby="years_single-hint" required>
+                <label for="years_single" data-story="How long had you been single?">How long have you been single?</label>
+                <p class="hint" id="years_single-hint" data-story="In years, a year ago. Use 0.5 for six months. Never been in one? Put how many years it had been since you turned 18.">In years. Use 0.5 for six months or 0 if you just became single. Never been in one? Put how many years since you turned 18.</p>
+                <input type="number" id="years_single" name="years_single" min="0" max="82" step="0.1" placeholder="e.g. 1.5" aria-describedby="years_single-hint" required>
             </div>
             <div class="field">
-                <label for="social_activity">How social are you?</label>
-                <p class="hint" id="social_activity-hint">Slide left if you love staying home, right if you're always out with people.</p>
+                <label for="social_activity" data-story="How social were you?">How social are you?</label>
+                <p class="hint" id="social_activity-hint" data-story="Slide left if you loved staying home, right if you were always out with people.">Slide left if you love staying home, right if you're always out with people.</p>
                 <input type="range" id="social_activity" name="social_activity" min="1" max="10" value="5" aria-describedby="social_activity-hint">
                 <div class="range-labels"><span>&#127968; Homebody</span><output for="social_activity">5</output><span>Party star &#127881;</span></div>
             </div>
             <div class="field">
-                <label for="confidence">How confident do you feel?</label>
-                <p class="hint" id="confidence-hint">When you meet someone new. Slide left if you're shy, right if you feel very sure of yourself.</p>
+                <label for="confidence" data-story="How confident did you feel?">How confident do you feel?</label>
+                <p class="hint" id="confidence-hint" data-story="When meeting someone new. Slide left if you were shy, right if you felt very sure of yourself.">When you meet someone new. Slide left if you're shy, right if you feel very sure of yourself.</p>
                 <input type="range" id="confidence" name="confidence" min="1" max="10" value="5" aria-describedby="confidence-hint">
                 <div class="range-labels"><span>&#128584; Shy</span><output for="confidence">5</output><span>Very sure &#128526;</span></div>
             </div>
             <div class="field">
-                <label for="hobbies_count">How many hobbies do you have?</label>
-                <p class="hint" id="hobbies_count-hint">Things you do for fun often, like sports, music, drawing, cooking or games.</p>
-                <input type="number" id="hobbies_count" name="hobbies_count" min="0" placeholder="e.g. 3" aria-describedby="hobbies_count-hint" required>
+                <label for="hobbies_count" data-story="How many hobbies did you have?">How many hobbies do you have?</label>
+                <p class="hint" id="hobbies_count-hint" data-story="Things you did for fun often, like sports, music, drawing, cooking or games.">Things you do for fun often, like sports, music, drawing, cooking or games.</p>
+                <input type="number" id="hobbies_count" name="hobbies_count" min="0" max="50" placeholder="e.g. 3" aria-describedby="hobbies_count-hint" required>
             </div>
             <div class="field">
-                <label for="friends_count">How many close friends?</label>
-                <p class="hint" id="friends_count-hint">Friends you actually talk to or hang out with, not just people you follow online.</p>
-                <input type="number" id="friends_count" name="friends_count" min="0" placeholder="e.g. 10" aria-describedby="friends_count-hint" required>
+                <label for="friends_count" data-story="How many close friends did you have?">How many close friends?</label>
+                <p class="hint" id="friends_count-hint" data-story="Friends you actually talked to or hung out with, not just people you followed online.">Friends you actually talk to or hang out with, not just people you follow online.</p>
+                <input type="number" id="friends_count" name="friends_count" min="0" max="200" placeholder="e.g. 10" aria-describedby="friends_count-hint" required>
             </div>
             <div class="field">
-                <label for="uses_dating_apps">Do you use dating apps?</label>
+                <label for="uses_dating_apps" data-story="Did you use dating apps?">Do you use dating apps?</label>
                 <p class="hint" id="uses_dating_apps-hint">Apps on your phone for meeting people, like Tinder, Bumble or Hinge.</p>
                 <select id="uses_dating_apps" name="uses_dating_apps" aria-describedby="uses_dating_apps-hint" required>
-                    <option value="1">Yes, I do</option>
-                    <option value="0">No, I don't</option>
+                    <option value="1" data-story="Yes, I did">Yes, I do</option>
+                    <option value="0" data-story="No, I didn't">No, I don't</option>
                 </select>
             </div>
             <div class="field">
-                <label for="goes_out_per_month">How often do you go out?</label>
-                <p class="hint" id="goes_out_per_month-hint">Times in a usual month you go out to see people, like parties, cafes, events or trips with friends.</p>
-                <input type="number" id="goes_out_per_month" name="goes_out_per_month" min="0" placeholder="e.g. 4" aria-describedby="goes_out_per_month-hint" required>
+                <label for="goes_out_per_month" data-story="How often did you go out?">How often do you go out?</label>
+                <p class="hint" id="goes_out_per_month-hint" data-story="Times in a usual month you went out to see people, like parties, cafes, events or trips with friends.">Times in a usual month you go out to see people, like parties, cafes, events or trips with friends.</p>
+                <input type="number" id="goes_out_per_month" name="goes_out_per_month" min="0" max="31" placeholder="e.g. 4" aria-describedby="goes_out_per_month-hint" required>
             </div>
+            <p class="muted story-error" id="story-error" role="alert" hidden></p>
             <div class="form-actions">
                 <button type="reset" class="btn secondary">Clear &#10006;</button>
-                <button type="submit" class="btn">See my love forecast &#9825;</button>
+                <button type="submit" class="btn" id="submit-button" data-story="Share my story &#128140;">See my love forecast &#9825;</button>
             </div>
         </form>
 
-        <p class="footer-note">Just for fun! This is a playful guess, not real relationship advice. Nothing you type is saved. &#10047;</p>
+        <div id="thanks" class="panel reveal" hidden>
+            <h2>Thank you! &#128149;</h2>
+            <p id="thanks-message"></p>
+            <div class="form-actions">
+                <button type="button" class="btn" id="forecast-button">Get my own forecast &#9825;</button>
+            </div>
+        </div>
+
+        <p class="footer-note" data-story="Your answers are saved without your name and only used to help the forecast learn. &#10047;">Just for fun! This is a playful guess, not real relationship advice. Nothing you type is saved. &#10047;</p>
     </div>
 
     <script>
         const form = document.getElementById('predict-form');
         const STORAGE_KEY = 'loveForecastAnswers';
+        const errorBox = document.getElementById('story-error');
+        const submitButton = document.getElementById('submit-button');
+        const thanks = document.getElementById('thanks');
+        const modeInputs = document.querySelectorAll('input[name="mode"]');
+        const currentMode = () => document.querySelector('input[name="mode"]:checked').value;
+
+        // Remember the forecast wording, so it can come back after switching to the story wording
+        const swappable = document.querySelectorAll('[data-story]');
+        swappable.forEach(node => { node.dataset.forecast = node.textContent; });
+
+        // Switch the page between "Get my love forecast" and "Share my story"
+        const setMode = mode => {
+            const story = mode === 'story';
+            swappable.forEach(node => { node.textContent = node.dataset[mode]; });
+            form.querySelectorAll('[data-only]').forEach(field => {
+                const shown = field.dataset.only === mode;
+                field.hidden = !shown;
+                // Hidden questions must not stop the form from being sent
+                field.querySelectorAll('input, select').forEach(input => { input.required = shown; });
+            });
+            errorBox.hidden = true;
+            form.hidden = false;
+            thanks.hidden = true;
+            history.replaceState(null, '', story ? '/' : '/forecast');
+        };
+        modeInputs.forEach(input => input.addEventListener('change', () => setMode(input.value)));
 
         // Show the current number next to each slider as it moves
         const sliders = form.querySelectorAll('input[type="range"]');
@@ -104,22 +157,24 @@
         };
         sliders.forEach(slider => slider.addEventListener('input', () => updateBubble(slider)));
 
-        // Fill the form back in when coming back from the result page
+        // Fill the forecast back in when coming back from the result page
         const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
-        if (saved) {
+        if (saved && currentMode() === 'forecast') {
             Object.entries(saved).forEach(([name, value]) => {
                 if (form.elements[name]) form.elements[name].value = value;
             });
             sliders.forEach(updateBubble);
         }
+        setMode(currentMode());
 
         // Clear button: empty every answer and forget the saved ones
         form.addEventListener('reset', () => {
             sessionStorage.removeItem(STORAGE_KEY);
+            errorBox.hidden = true;
             // The browser resets the values right after this event, so update the sliders a moment later
             setTimeout(() => {
                 sliders.forEach(updateBubble);
-                form.elements.name.focus();
+                form.querySelector('.field:not([hidden]) input, .field:not([hidden]) select').focus();
             });
         });
 
@@ -133,11 +188,59 @@
             setTimeout(() => { window.location.href = url; }, 550);
         };
 
+        const thanksText = result => {
+            if (!result.saved) return "We already have this story, so there's no need to send it again.";
+            if (result.retrained) return "Your story just helped the Love Predictor learn something new. The forecast has been updated with everyone's real stories!";
+            const left = result.until_next_update;
+            return `Your story was saved. The forecast learns from real stories in batches, and ${left} more ${left === 1 ? 'story is' : 'stories are'} needed before the next update.`;
+        };
+
+        // Story mode: send the story to the server and say thank you
+        const shareStory = async () => {
+            const data = Object.fromEntries(new FormData(form));
+            delete data.name;
+            errorBox.hidden = true;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Sending...';
+            try {
+                const response = await fetch('/api/model/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Request failed');
+                document.getElementById('thanks-message').textContent = thanksText(result);
+                form.hidden = true;
+                thanks.hidden = false;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (error) {
+                errorBox.textContent = "Oops! We couldn't save your story. Please check every answer and try again.";
+                errorBox.hidden = false;
+                console.error('Story error:', error);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = submitButton.dataset.story;
+            }
+        };
+
         form.addEventListener('submit', (e) => {
             e.preventDefault();
+            if (currentMode() === 'story') {
+                shareStory();
+                return;
+            }
             const data = Object.fromEntries(new FormData(form));
+            delete data.will_have_relationship;
             sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             goTo('/result');
+        });
+
+        // After sharing a story, switch back to the forecast
+        document.getElementById('forecast-button').addEventListener('click', () => {
+            document.getElementById('mode-forecast').checked = true;
+            setMode('forecast');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
 
         // Browsers may restore this page from cache on "Back", so undo the leaving animation
