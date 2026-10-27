@@ -1,0 +1,153 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Run by hand from the Actions tab
+  workflow_dispatch:
+
+# Cancel an older run of the same branch when a new commit arrives
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    name: Build, test and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # GITHUB_TOKEN only needs to read the code and publish packages
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Work out image name and tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # Becomes ghcr.io/<owner>/<repo> in lowercase
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short,prefix=
+          labels: |
+            org.opencontainers.image.title=Love Predictor
+            org.opencontainers.image.description=Predicts your chance of finding love and gives AI-written tips to boost it
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          # Keep the image on the runner so it can be tested before publishing
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Reuse layers from earlier builds, so a code-only change doesn't reinstall PyTorch
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start the container
+        run: |
+          image=$(echo "${{ steps.meta.outputs.tags }}" | head -n 1)
+          docker run -d --name love-predictor -p 5001:5001 "$image"
+          # Wait up to 2 minutes for the server to answer
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:5001/ > /dev/null; then
+              echo "Server is up after $((i * 2)) seconds"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::The container did not start"
+          docker logs love-predictor
+          exit 1
+
+      - name: Test the running container
+        run: |
+          python3 - <<'EOF'
+          import json
+          import urllib.error
+          import urllib.request
+
+          BASE = 'http://localhost:5001'
+          person = {
+              'name': 'Alex', 'age': 25, 'sex': 1, 'past_relationships': 2, 'years_single': 3,
+              'social_activity': 3, 'confidence': 4, 'hobbies_count': 2, 'friends_count': 6,
+              'uses_dating_apps': 0, 'goes_out_per_month': 1,
+          }
+
+          def post(path, body, timeout=30):
+              request = urllib.request.Request(
+                  BASE + path, json.dumps(body).encode(), {'Content-Type': 'application/json'}
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=timeout) as response:
+                      return response.status, json.load(response)
+              except urllib.error.HTTPError as error:
+                  return error.code, json.load(error)
+
+          for page in ('/', '/result'):
+              assert urllib.request.urlopen(BASE + page).status == 200, f'{page} failed'
+          print('Pages load')
+
+          status, result = post('/api/model/predict', person)
+          assert status == 200, result
+          assert result['prediction'] in (0, 1)
+          assert 0 <= result['probability'] <= 1
+          for key in ('average_probability', 'percentile', 'strengths', 'challenges'):
+              assert key in result['insights'], f'Missing insight: {key}'
+          print(f"Prediction works: {result['probability']:.0%} chance")
+
+          status, _ = post('/api/model/predict', {'age': 25})
+          assert status == 400, 'Missing fields should return 400'
+          print('Bad input is rejected')
+
+          accuracy = json.load(urllib.request.urlopen(BASE + '/api/model/evaluate'))['accuracy']
+          assert accuracy >= 0.65, f'Accuracy dropped below 65%: {accuracy:.3f}'
+          print(f'Model accuracy: {accuracy:.1%}')
+
+          # The AI model is inside the image, so tips must work (they take about a minute on CPU)
+          status, tips = post('/api/model/recommend', person, timeout=400)
+          assert status == 200, tips
+          assert tips['recommendations'], 'No tips were generated'
+          for tip in tips['recommendations']:
+              assert len(tip['tip'].split()) >= 15, f"Tip too short: {tip['tip']}"
+          print(f"AI tips work: {len(tips['recommendations'])} tips")
+          EOF
+
+      - name: Show container logs if something failed
+        if: failure()
+        run: docker logs love-predictor || true
+
+      - name: Log in to GitHub Container Registry
+        # Pull requests are only built and tested, never published
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish the image
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
+            [ -n "$tag" ] && docker push "$tag"
+          done
+          image=$(echo "${{ steps.meta.outputs.tags }}" | head -n 1)
+          {
+            echo "### Published 🎉"
+            echo
+            echo '```bash'
+            echo "docker run -p 5001:5001 $image"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

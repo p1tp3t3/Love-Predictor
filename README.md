@@ -63,6 +63,14 @@ Then open http://localhost:5001.
 - **Production server:** the image runs the app with [gunicorn](https://gunicorn.org/) instead of Flask's development server. To use a different port, set the `PORT` variable, for example `docker run -e PORT=8080 -p 8080:8080 love-predictor`.
 - **Stop it:** press Ctrl + C, or run `docker ps` to find the container and `docker stop <container id>`.
 
+### Ready-made image
+
+A [GitHub Actions workflow](.github/workflows/docker.yml) builds the Docker image on every push and pull request to `main`, starts it and tests the running app, including the AI tips. When a push to `main` passes, the image is published to GitHub Container Registry, so you can skip building it:
+
+```bash
+docker run -p 5001:5001 ghcr.io/p1tp3t3/relationship-predictor:latest
+```
+
 ## Project structure
 
 ```
@@ -70,6 +78,7 @@ love-predictor/
 ├── main.py                       # Flask app: pages and API routes
 ├── requirements.txt              # Python packages to install
 ├── Dockerfile                    # Builds the Docker image (gunicorn, AI model included)
+├── .github/workflows/docker.yml  # Builds, tests and publishes the Docker image
 ├── generate_dataset.py           # Creates the synthetic dataset.csv
 ├── dataset.csv                   # 1,000 rows of made-up training data
 ├── docs/screenshots/             # Screenshots used in this README
