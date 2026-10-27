@@ -95,7 +95,7 @@ The model rediscovered the pattern hidden in the synthetic data: confidence and 
 
 ### Retraining
 
-The model is trained from `dataset.csv` every time the app starts. To retrain on new data, regenerate or edit the CSV and restart the app. `RelationshipPredictor.append_data()` can also add new labeled rows (with `will_have_relationship` filled in) and save them to the CSV.
+The model is trained from `dataset.csv` every time the app starts. To retrain on new data, regenerate or edit the CSV and restart the app. `LovePredictor.append_data()` can also add new labeled rows (with `will_have_relationship` filled in) and save them to the CSV.
 
 ## Getting started
 

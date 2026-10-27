@@ -36,8 +36,8 @@ INSIGHT_FEATURES = [
 MIN_INSIGHT_IMPACT = 0.01
 
 
-class RelationshipPredictor:
-    # The RelationshipPredictor class is responsible for handling the machine learning model and its operations.
+class LovePredictor:
+    # The LovePredictor class is responsible for handling the machine learning model and its operations.
     # It predicts whether the person will have a relationship based on the history of the situation of the person.
     def __init__(self, dataset_path=DATASET_PATH):
         self.dataset_path = dataset_path

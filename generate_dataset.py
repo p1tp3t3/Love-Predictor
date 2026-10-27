@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-# Generates a synthetic dataset for the RelationshipPredictor.
+# Generates a synthetic dataset for the LovePredictor.
 # All columns are numeric so they can be fed straight into LogisticRegression.
 # sex: 0 = male, 1 = female
 
