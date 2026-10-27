@@ -61,6 +61,7 @@ Then open http://localhost:5001.
 - **Build time and size:** the first build takes a few minutes and the image is about 4 GB, because it includes PyTorch and the AI model. Later builds are much faster when only the code changes.
 - **Works offline:** the AI model and the trained prediction model are built into the image, so the container runs without an internet connection.
 - **Production server:** the image runs the app with [gunicorn](https://gunicorn.org/) instead of Flask's development server. To use a different port, set the `PORT` variable, for example `docker run -e PORT=8080 -p 8080:8080 love-predictor`.
+- **Open it on other devices:** the container listens on your whole local network, so phones and laptops on the same Wi-Fi can open `http://<this computer's IP>:5001` (on Windows, find the IP with `ipconfig`; on macOS or Linux, `ipconfig getifaddr en0` or `hostname -I`). If it doesn't load, allow port 5001 through your computer's firewall. To keep it private to your computer, run `docker run -p 127.0.0.1:5001:5001 love-predictor` instead.
 - **Stop it:** press Ctrl + C, or run `docker ps` to find the container and `docker stop <container id>`.
 
 ### Ready-made image

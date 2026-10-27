@@ -26,11 +26,14 @@ COPY --chown=user . .
 # Train and save the prediction model so the first start doesn't have to
 RUN python -m model.love_predictor
 
+# Listen on every network interface, not just localhost, so other devices on your
+# local network (phones, laptops) can open the app through the published port.
 # Same port as running locally; hosting services can override it with the PORT variable
-ENV PORT=5001
+ENV HOST=0.0.0.0 \
+    PORT=5001
 EXPOSE 5001
 
 # One worker keeps a single copy of the language model in memory; threads let predictions
 # answer while tips are generating. The long timeout covers slow tip generation on CPU.
 # "exec" makes gunicorn the main process, so it shuts down cleanly on "docker stop"
-CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 300 main:app"]
+CMD ["sh", "-c", "echo \"Love Predictor: open http://localhost:$PORT on this computer, or http://<this computer's IP>:$PORT on other devices on your network\" && exec gunicorn --bind $HOST:$PORT --workers 1 --threads 4 --timeout 300 main:app"]
