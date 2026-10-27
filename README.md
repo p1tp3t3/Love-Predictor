@@ -47,12 +47,42 @@ Then open http://127.0.0.1:5001 in your browser.
 
 The first start takes a little longer because the AI model is downloaded and loaded. Tips take about a minute to generate on a regular CPU, so the forecast and insights show up first and the tips appear when they are ready.
 
+### Run with Docker
+
+Every push to `main` that passes the tests is published as a Docker image to GitHub Container Registry. The image already includes the AI model and the trained prediction model, so it works without an internet connection.
+
+```bash
+docker run -p 5001:5001 ghcr.io/p1tp3t3/relationship-predictor:latest
+```
+
+Then open http://localhost:5001. The image is about 4 GB because it includes PyTorch and the AI model.
+
+To build the image yourself instead:
+
+```bash
+docker build -t love-predictor .
+docker run -p 5001:5001 love-predictor
+```
+
+## Deployment
+
+Two GitHub Actions workflows run automatically:
+
+| Workflow | When | What it does |
+|---|---|---|
+| [CI](.github/workflows/ci.yml) | Every push and pull request to `main` | Installs the packages, checks the code compiles, trains the model (fails below 65% accuracy) and smoke-tests the pages and API |
+| [Deploy](.github/workflows/deploy.yml) | After CI passes on `main`, or by hand from the Actions tab | Builds the Docker image and publishes it to GitHub Container Registry, tagged `latest` and with the short commit ID |
+
+The published image appears under **Packages** on the repository page. The image runs the app with [gunicorn](https://gunicorn.org/), a production web server, on port 5001. Hosting services that set a `PORT` variable can override the port.
+
 ## Project structure
 
 ```
 love-predictor/
 ├── main.py                       # Flask app: pages and API routes
 ├── requirements.txt              # Python packages to install
+├── Dockerfile                    # Builds the Docker image (gunicorn, AI model included)
+├── .github/workflows/            # CI tests and Docker image deployment
 ├── generate_dataset.py           # Creates the synthetic dataset.csv
 ├── dataset.csv                   # 1,000 rows of made-up training data
 ├── docs/screenshots/             # Screenshots used in this README

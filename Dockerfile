@@ -1,0 +1,36 @@
+# Container image for running Love Predictor on any Docker host
+FROM python:3.13-slim
+
+# Run as a normal user instead of root, for safety
+RUN useradd --create-home --uid 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH \
+    HF_HOME=/home/user/.cache/huggingface \
+    PYTHONUNBUFFERED=1
+WORKDIR /home/user/app
+
+# Install packages first so this layer is cached when only the code changes.
+# The CPU-only build of PyTorch is much smaller than the default GPU build.
+COPY --chown=user requirements.txt .
+RUN pip install --no-cache-dir --user torch --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir --user -r requirements.txt
+
+# Download the language model at build time so the app starts quickly
+RUN python -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen2.5-0.5B-Instruct')"
+# The model is now inside the image, so never contact the Hugging Face website at runtime
+ENV HF_HUB_OFFLINE=1
+
+COPY --chown=user . .
+
+# Train and save the prediction model so the first start doesn't have to
+RUN python -m model.love_predictor
+
+# Same port as running locally; hosting services can override it with the PORT variable
+ENV PORT=5001
+EXPOSE 5001
+
+# One worker keeps a single copy of the language model in memory; threads let predictions
+# answer while tips are generating. The long timeout covers slow tip generation on CPU.
+# "exec" makes gunicorn the main process, so it shuts down cleanly on "docker stop"
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 300 main:app"]
