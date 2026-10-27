@@ -11,6 +11,12 @@ A playful web app that guesses your chance of finding a relationship, explains w
 - **AI tips:** get three personal, 3-sentence tips written by a small language model, each focused on the change that would help you most.
 - **Friendly design:** hand-drawn, doodle-style pages with page transitions, sliders and a description under every question.
 
+## Screenshots
+
+| Answer a few easy questions | Get your forecast, insights and tips |
+|---|---|
+| ![Question form with a description under every field, sliders for confidence and social activity, and Clear and See my love forecast buttons](docs/screenshots/form.png) | ![Result page showing a 38% chance, a comparison with the average person, what is working and what is holding you back, and three AI-written tips](docs/screenshots/result.png) |
+
 ## How it works
 
 1. **Prediction:** a machine learning model (logistic regression), trained on [dataset.csv](dataset.csv), predicts the chance from your answers. See [Machine learning](#machine-learning) below.
@@ -123,6 +129,7 @@ love-predictor/
 ├── requirements.txt              # Python packages to install
 ├── generate_dataset.py           # Creates the synthetic dataset.csv
 ├── dataset.csv                   # 1,000 rows of made-up training data
+├── docs/screenshots/             # Screenshots used in this README
 ├── model/
 │   ├── relationship_predictor.py # Logistic regression model, insights and what-if improvements
 │   └── recommender.py            # AI-written tips using Hugging Face transformers

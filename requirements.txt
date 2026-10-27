@@ -3,3 +3,4 @@ scikit-learn
 transformers
 accelerate
 torch
+pandas
